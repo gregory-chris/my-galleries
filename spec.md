@@ -64,6 +64,7 @@ Users can create multiple galleries, upload images, and browse their collection 
 ### File Permissions
 - `/public/uploads/` - Must be writable by web server
 - `/database/` - Must be writable by web server
+- `/logs/` - Must be writable by web server, NOT web-accessible (deny via .htaccess)
 
 ## MVP Features
 
@@ -338,6 +339,243 @@ Users can create multiple galleries, upload images, and browse their collection 
     └── schema.sql        # Database schema
 ```
 
+## Logging & Debugging
+
+### Overview
+All API operations, errors, and critical events must be logged to facilitate debugging, monitoring, and troubleshooting. Logs are stored in structured JSON format for easy parsing and analysis.
+
+### What to Log
+
+**API Requests:**
+- HTTP method (GET, POST, PUT, DELETE)
+- Request path/endpoint
+- User ID (if authenticated)
+- IP address
+- Timestamp (UTC)
+- Request ID (unique identifier for each request)
+
+**API Responses:**
+- HTTP status code
+- Response time/duration (in milliseconds)
+- Request ID (for correlation)
+
+**Authentication Events:**
+- Login attempts (success and failure)
+- Logout events
+- Token generation
+- Token validation (success and failure)
+- User email (not password)
+
+**File Upload Operations:**
+- Gallery ID
+- Number of files uploaded
+- Total size of upload batch
+- Individual filenames (server-generated, not original)
+- Success or failure status
+- Error details on failure
+
+**Database Operations (Development):**
+- Failed queries with error messages
+- Cascade delete operations (gallery deletion with image count)
+- Connection errors
+
+**Errors and Exceptions:**
+- Error message
+- Error type/class
+- Stack trace
+- Request context (path, user, request ID)
+- HTTP status code returned
+
+**Validation Failures:**
+- Field name
+- Validation rule that failed
+- Submitted value (sanitized, no sensitive data)
+
+### Log Format
+
+All logs must be written in structured JSON format with the following fields:
+
+```json
+{
+  "timestamp": "2023-10-15T14:30:45.123Z",
+  "level": "INFO",
+  "type": "request",
+  "request_id": "a3f9c2b8e1d4",
+  "user_id": 5,
+  "ip_address": "192.168.1.100",
+  "message": "API request completed",
+  "context": {
+    "method": "POST",
+    "path": "/api/galleries",
+    "status_code": 201,
+    "duration_ms": 45
+  }
+}
+```
+
+**Required Fields:**
+- `timestamp` - ISO 8601 format in UTC
+- `level` - Log level (DEBUG, INFO, WARNING, ERROR)
+- `type` - Log type (request, auth, upload, error, database)
+- `message` - Human-readable message
+- `request_id` - Unique request identifier (12-character alphanumeric)
+
+**Optional Fields:**
+- `user_id` - Authenticated user ID
+- `ip_address` - Client IP address
+- `context` - Additional contextual data (object)
+- `stack_trace` - Error stack trace (for ERROR level)
+
+### Log Storage
+
+**Directory Structure:**
+- **Base Directory:** `/logs/`
+- **Security:** Directory must NOT be web-accessible (protected by .htaccess)
+- **Permissions:** Writable by web server process
+
+**Log Files:**
+- `api.log` - All API requests and responses
+- `error.log` - Errors and exceptions only (level ERROR)
+- `auth.log` - Authentication and authorization events
+- `upload.log` - File upload operations
+
+**Daily Rotation:**
+- Logs are rotated monthly at every 1st day of a month at midnight UTC
+- Filename format: `{type}-{YYYY-MM}.log`
+- Example: `api-2023-10.log`, `error-2023-11.log`
+- Current month logs use base filename (e.g., `api.log`)
+
+**Retention:**
+- Keep log files forever
+
+### Log Levels
+
+**DEBUG** (Development Only):
+- Detailed debugging information
+- Database queries
+- Detailed request/response bodies
+- Internal state changes
+
+**INFO** (Default):
+- General informational messages
+- Successful API requests
+- Authentication success
+- File upload success
+- Normal operations
+
+**WARNING**:
+- Non-critical issues
+- Validation failures
+- Authentication failures (failed login attempts)
+- Rate limiting (if implemented)
+- Deprecated API usage
+
+**ERROR**:
+- Critical errors
+- Exceptions and stack traces
+- Database connection failures
+- File system errors
+- Failed file uploads
+- 500 Internal Server errors
+
+### Environment-Specific Behavior
+
+**Development:**
+- Log level: DEBUG and above
+- Output: Write to log files AND stdout/stderr
+- Include sensitive data in context (for debugging)
+- Include full stack traces
+- Log all database queries
+
+**Production:**
+- Log level: INFO and above
+- Output: Write to log files only
+- Exclude sensitive data (passwords, full tokens, credit cards)
+- Include stack traces only for ERROR level
+- Do not log individual database queries
+
+**Sensitive Data Exclusion:**
+Never log the following in production:
+- Passwords (plain or hashed)
+- Full JWT tokens (log only first 10 chars: `eyJhbGciOi...`)
+- Session tokens
+- Credit card numbers (if added in future)
+- Social security numbers or personal IDs
+
+### Request ID Generation
+
+**Format:**
+- 12-character alphanumeric string
+- Generated using: `substr(bin2hex(random_bytes(6)), 0, 12)`
+- Unique per request
+
+**Usage:**
+- Generated at start of each API request
+- Added to all log entries for that request
+- Included in response headers: `X-Request-ID: a3f9c2b8e1d4`
+- Included in error responses for traceability
+
+**Example:**
+```json
+{
+  "error": "Gallery not found",
+  "details": "Gallery ID 123 does not exist",
+  "request_id": "a3f9c2b8e1d4"
+}
+```
+
+### Log Viewer
+
+**Purpose:**
+Simple web-based interface to view and filter logs for debugging
+
+**Location:** `/server/logs/viewer.php`
+
+**Features:**
+- View recent log entries (last 100, 500, 1000)
+- Filter by:
+  - Date range
+  - Log level (DEBUG, INFO, WARNING, ERROR)
+  - Log type (request, auth, upload, error)
+  - User ID
+  - Request ID
+- Search by keyword
+- Display in readable format (formatted JSON)
+- Refresh/reload capability
+
+**Security:**
+- Protected by authentication (requires valid JWT token)
+- Only accessible to authenticated users
+- Consider admin-only access in production
+
+**Implementation:**
+- Read log files from `/logs/` directory
+- Parse JSON lines
+- Apply filters
+- Display in HTML table or formatted view
+- Basic HTML/CSS interface (no React needed)
+
+### Logger Implementation
+
+**Logger Class/Functions:**
+
+Create utility functions in `/server/utils/logger.php`:
+
+```php
+function logRequest($method, $path, $statusCode, $durationMs, $userId = null)
+function logError($message, $context = [], $exception = null)
+function logAuth($event, $email, $success, $userId = null)
+function logUpload($galleryId, $fileCount, $totalSize, $success, $errorDetails = null)
+function logDatabase($query, $success, $errorMessage = null)
+```
+
+**Each function:**
+- Generates properly formatted JSON log entry
+- Includes timestamp, level, type, request_id
+- Writes to appropriate log file(s)
+- Handles file rotation
+- Uses file locking to prevent corruption
+
 ## Error Handling Standards
 
 ### HTTP Status Codes
@@ -354,25 +592,60 @@ All error responses must follow this JSON structure:
 ```json
 {
   "error": "User-friendly error message",
-  "details": "Technical details for debugging (optional in production)"
+  "details": "Technical details for debugging (optional in production)",
+  "request_id": "a3f9c2b8e1d4"
 }
 ```
+
+**Required Fields:**
+- `error` - User-friendly error message (always included)
+- `request_id` - Unique request identifier for log correlation (always included)
+
+**Optional Fields:**
+- `details` - Technical details for debugging (included in development, optional in production)
 
 **Examples:**
 
 ```json
 {
   "error": "Invalid email or password",
-  "details": "User not found in database"
+  "details": "User not found in database",
+  "request_id": "a3f9c2b8e1d4"
 }
 ```
 
 ```json
 {
   "error": "File size exceeds maximum limit of 10MB",
-  "details": "Uploaded file size: 12.5MB"
+  "details": "Uploaded file size: 12.5MB",
+  "request_id": "b7c4d8e2f9a1"
 }
 ```
+
+### Error Logging Requirements
+
+**All errors must be logged before returning to client:**
+
+1. **Log Level:**
+   - Validation errors (400): WARNING level
+   - Authentication errors (401): WARNING level
+   - Not found errors (404): INFO level
+   - Server errors (500): ERROR level
+
+2. **Required Log Information:**
+   - Error message (same as response)
+   - HTTP status code
+   - Request ID (for correlation)
+   - Request path and method
+   - User ID (if authenticated)
+   - Stack trace (for 500 errors only)
+   - Context (relevant data that led to error)
+
+3. **Implementation:**
+   - Call `logError()` function before returning error response
+   - Include exception object if available
+   - Sanitize sensitive data before logging
+   - Ensure request_id in log matches response
 
 ### Frontend Error Handling
 - **Display:** Show `error` field in toast notification or alert
