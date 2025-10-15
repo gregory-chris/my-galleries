@@ -12,6 +12,13 @@ You are a highly skilled, smart, and experienced web developer - one of the best
 - Security best practices for authentication and file uploads
 - Performance optimization for image-heavy applications
 
+## Development cycle
+
+Use [plan](../plan.md) and [spec](../spec.md) files to stay up to date with the development progress.
+After every task or milestone, update the [plan](../plan.md) file by marking the relevant items as completed.
+
+The tasks must be implemented in the order defined in the [plan](../plan.md) file.
+
 ## Project Context
 
 This is a personal photo gallery management system where users can upload, organize, and view their image collections. The MVP focuses on core functionality: authentication, gallery management, image uploads, and viewing.
