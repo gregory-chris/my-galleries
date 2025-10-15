@@ -25,6 +25,10 @@ This is a personal photo gallery management system where users can upload, organ
 
 ## Code Style & Standards
 
+### Git
+
+- Maintain .gitignore file to exclude files and folders that should not be part of the repository
+
 ### JavaScript/React
 
 - Use functional components with hooks
