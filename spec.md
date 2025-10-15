@@ -1,5 +1,7 @@
 # my-galleries.com - MVP Specification
 
+> **Note:** This specification defines the Minimum Viable Product (MVP) scope only. The `project-description.md` file represents the future vision with additional features like video support, collaboration, and public sharing, which are explicitly excluded from this MVP.
+
 ## Project Overview
 
 A web application for uploading, organizing, and viewing personal photo galleries.
@@ -28,6 +30,41 @@ Users can create multiple galleries, upload images, and browse their collection 
 - **JWT** - JSON Web Tokens for authentication
 - **UTC** - Use Universal Time for timestamps
 
+### Backend Dependencies (Composer)
+
+```json
+{
+  "require": {
+    "slim/slim": "^4.0",
+    "slim/psr7": "^1.0",
+    "firebase/php-jwt": "^6.0"
+  }
+}
+```
+
+**Note:** Use Slim's built-in router. No additional routing packages required.
+
+## Server Requirements
+
+### PHP Configuration
+- **PHP Version:** 7.4 or higher
+- **Required PHP Extensions:**
+  - `pdo_sqlite` - SQLite database support
+  - `gd` - Image processing for thumbnails
+  - `mbstring` - Multibyte string handling
+
+### Apache Configuration
+- **Apache Modules:** 
+  - `mod_rewrite` - URL rewriting for clean URLs
+- **DocumentRoot:** Project root directory
+- **.htaccess Files:**
+  - `/public/.htaccess` - Frontend routing (SPA fallback to index.html)
+  - `/server/.htaccess` - API routing (route all requests through PHP)
+
+### File Permissions
+- `/public/uploads/` - Must be writable by web server
+- `/database/` - Must be writable by web server
+
 ## MVP Features
 
 ### 1. User Authentication
@@ -37,6 +74,30 @@ Users can create multiple galleries, upload images, and browse their collection 
 - Session management
 - Top bar with user icon and dropdown menu
 - Modal-based login/signup forms
+
+#### Authentication Details
+
+**JWT Configuration:**
+- **Storage Location:** `localStorage` with key name `auth_token`
+- **Token Expiration:** 24 hours from generation
+- **Token Format:** Standard JWT with HS256 algorithm
+- **Authorization Header:** `Authorization: Bearer {token}`
+
+**Password Security:**
+- **Hashing Algorithm:** PHP `password_hash()` with `PASSWORD_BCRYPT`
+- **Minimum Length:** 8 characters
+- **Complexity Requirements:** None for MVP (simple validation)
+
+**Session Management:**
+- **Multiple Sessions:** Allowed (users can have multiple active tokens)
+- **Token Storage in DB:** Multiple tokens per user stored in `auth_tokens` field. The field is in JSON format containing list of objects containing a JWT token and its expiration date.
+- **Logout Behavior:** Invalidates only the current token (removes it from `auth_tokens`)
+- **Token Refresh:** Not implemented in MVP (users must re-login after 24 hours)
+
+**Auth State Persistence:**
+- Check `localStorage` for `auth_token` on app initialization
+- Validate token by calling `GET /api/auth/me` endpoint
+- Clear token and redirect to login if validation fails
 
 ### 2. Gallery Management
 
@@ -54,6 +115,38 @@ Users can create multiple galleries, upload images, and browse their collection 
 - Image preview before/after upload
 - Basic error handling for failed uploads
 
+#### File Upload Rules
+
+**Size Limits:**
+- **Max file size per image:** 10 MB
+- **Max images per upload batch:** 20 files
+- **Max total batch size:** 200 MB
+
+**File Storage:**
+- **Storage Path:** `/public/uploads/` (web-accessible directory)
+- **Filename Format:** `{unix_timestamp}_{random_hash}.{original_extension}`
+  - Example: `1697385600_a3f9c2b8e1d4.jpg`
+  - Random hash: 12-character alphanumeric string
+- **Original Filename:** Stored in database `original_filename` field for reference
+
+**Thumbnail Generation:**
+- **Automatic:** Yes, generated on upload
+- **Dimensions:** Up to 300x300 pixels, preserve aspect ratio
+- **Method:** maintain aspect ratio (center crop), width and height must be at most 300 pixels
+- **Library:** PHP GD extension
+- **Filename Format:** `thumb_{unix_timestamp}_{random_hash}.{original_extension}`
+- **Storage Path:** Same as full images (`/public/uploads/`)
+
+**Validation:**
+- **File Type Check:** Both MIME type and file extension must match
+- **Allowed MIME Types:** `image/jpeg`, `image/png`, `image/gif`, `image/webp`
+- **Allowed Extensions:** `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`
+
+**Error Handling:**
+- **Failed Upload Behavior:** Rollback entire batch (delete all uploaded files from current batch)
+- **Validation Errors:** Return 400 status with specific error message
+- **Storage Errors:** Return 500 status with generic error message
+
 ### 4. Image Viewing
 
 - Gallery page showing all images in grid layout
@@ -69,7 +162,97 @@ Users can create multiple galleries, upload images, and browse their collection 
 - Image upload interface
 - Image viewer/lightbox
 
+## UI Behavior Specifications
+
+### Gallery Display
+- **Sorting Order:** Newest first (ORDER BY `created_at` DESC)
+- **Grid Layout:** 
+  - Desktop: 3 columns
+  - Tablet: 2 columns
+  - Mobile: 1 column
+- **Gallery Cards:** Show gallery name, image count, and thumbnail (first image or placeholder)
+
+### Image Display
+- **Ordering:** Upload order (ORDER BY `uploaded_at` ASC)
+- **Grid Layout:** Responsive grid with equal-sized thumbnails
+- **Lightbox Navigation:** Previous/Next buttons, keyboard arrows, ESC to close
+
+### Delete Behavior
+- **Gallery Deletion:** 
+  - Show confirmation dialog
+  - Cascade delete all associated images from database
+  - Delete all image files and thumbnails from filesystem
+- **Image Deletion:** 
+  - Show confirmation dialog
+  - Delete image record from database
+  - Delete image file and thumbnail from filesystem
+
+### Loading States
+- **Type:** Centered spinner overlay
+- **Text:** "Loading..." below spinner
+- **Use Cases:** API requests, image uploads, page transitions
+
+### Empty States
+- **No Galleries:** 
+  - Centered message: "No galleries yet"
+  - Icon: Photo icon from Heroicons
+  - Call-to-action: "Create Your First Gallery" button
+- **No Images in Gallery:** 
+  - Centered message: "No images in this gallery"
+  - Icon: Photo icon from Heroicons
+  - Call-to-action: "Upload Images" button
+
+### Authentication State
+- **On App Load:** Check `localStorage` for `auth_token`
+- **If Token Exists:** Validate with `GET /api/auth/me`
+- **If Valid:** Redirect to dashboard
+- **If Invalid:** Clear token, show login modal
+- **Protected Routes:** Redirect to home with login modal if not authenticated
+
+## Validation Rules
+
+### User Input
+- **Email:**
+  - Format: Standard email validation using PHP `filter_var($email, FILTER_VALIDATE_EMAIL)`
+  - Required field
+  - Must be unique (check during signup)
+
+- **Password:**
+  - Minimum length: 8 characters
+  - No maximum length limit
+  - No complexity requirements for MVP
+  - Required field
+
+### Gallery Input
+- **Gallery Name:**
+  - Length: 1-100 characters
+  - Allowed characters: Alphanumeric, spaces, and basic punctuation (`.`, `,`, `-`, `'`, `!`)
+  - Required field
+  - Pattern: `/^[a-zA-Z0-9\s.,\-'!]{1,100}$/`
+
+- **Gallery Description:**
+  - Length: 0-500 characters (optional)
+  - No character restrictions
+  - Optional field
+
+### Image Files
+- **File Type Validation:**
+  - Check MIME type matches extension
+  - Allowed combinations only:
+    - `image/jpeg` with `.jpg` or `.jpeg`
+    - `image/png` with `.png`
+    - `image/gif` with `.gif`
+    - `image/webp` with `.webp`
+- **File Size:** Enforced at PHP and frontend levels
+- **Filename Sanitization:** Server generates new filenames (no user input used)
+
 ## Database Schema
+
+### Database Configuration
+- **File Location:** `/database/galleries.db`
+- **Foreign Keys:** ENABLED with CASCADE delete
+- **Initial Data:** No seed data required
+- **Connection:** PDO with SQLite driver
 
 ### Users Table
 
@@ -77,7 +260,7 @@ Users can create multiple galleries, upload images, and browse their collection 
 - id (INTEGER PRIMARY KEY)
 - email (TEXT UNIQUE)
 - password_hash (TEXT)
-- auth_tokens (TEXT) COMMENT 'JSON Web Tokens for authentication separated by semicolons'
+- auth_tokens (TEXT) COMMENT 'JSON with list of objects, each has a JWT tokens and an expiration date'
 - created_at (DATETIME) COMMENT 'UTC timestamp of user creation'
 ```
 
@@ -153,6 +336,233 @@ Users can create multiple galleries, upload images, and browse their collection 
 │   └── uploads/          # Upload handling
 └── database/
     └── schema.sql        # Database schema
+```
+
+## Error Handling Standards
+
+### HTTP Status Codes
+- **200 OK** - Successful GET/PUT/DELETE request
+- **201 Created** - Successful POST request (resource created)
+- **400 Bad Request** - Validation errors, invalid input
+- **401 Unauthorized** - Missing or invalid authentication token
+- **404 Not Found** - Resource not found
+- **500 Internal Server Error** - Server-side errors (database, filesystem, etc.)
+
+### Error Response Format
+All error responses must follow this JSON structure:
+
+```json
+{
+  "error": "User-friendly error message",
+  "details": "Technical details for debugging (optional in production)"
+}
+```
+
+**Examples:**
+
+```json
+{
+  "error": "Invalid email or password",
+  "details": "User not found in database"
+}
+```
+
+```json
+{
+  "error": "File size exceeds maximum limit of 10MB",
+  "details": "Uploaded file size: 12.5MB"
+}
+```
+
+### Frontend Error Handling
+- **Display:** Show `error` field in toast notification or alert
+- **Logging:** Log full response including `details` to browser console
+- **User Feedback:** Always provide actionable feedback (e.g., "Please try again" or "Contact support")
+
+## API Response Formats
+
+### Authentication Endpoints
+
+**POST /api/auth/signup**
+```json
+// Request
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+// Response (201)
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "created_at": "2023-10-15T10:30:00Z"
+  }
+}
+```
+
+**POST /api/auth/login**
+```json
+// Request
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+// Response (200)
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "email": "user@example.com"
+  }
+}
+```
+
+**POST /api/auth/logout**
+```json
+// Request (token in Authorization header)
+{}
+
+// Response (200)
+{
+  "message": "Logged out successfully"
+}
+```
+
+**GET /api/auth/me**
+```json
+// Response (200)
+{
+  "id": 1,
+  "email": "user@example.com",
+  "created_at": "2023-10-15T10:30:00Z"
+}
+```
+
+### Gallery Endpoints
+
+**GET /api/galleries**
+```json
+// Response (200)
+{
+  "galleries": [
+    {
+      "id": 1,
+      "name": "Summer Vacation",
+      "description": "Photos from our trip",
+      "image_count": 15,
+      "created_at": "2023-10-15T10:30:00Z",
+      "updated_at": "2023-10-16T14:20:00Z"
+    }
+  ]
+}
+```
+
+**POST /api/galleries**
+```json
+// Request
+{
+  "name": "New Gallery",
+  "description": "Optional description"
+}
+
+// Response (201)
+{
+  "id": 2,
+  "name": "New Gallery",
+  "description": "Optional description",
+  "image_count": 0,
+  "created_at": "2023-10-17T09:15:00Z",
+  "updated_at": "2023-10-17T09:15:00Z"
+}
+```
+
+**GET /api/galleries/:id**
+```json
+// Response (200)
+{
+  "id": 1,
+  "name": "Summer Vacation",
+  "description": "Photos from our trip",
+  "created_at": "2023-10-15T10:30:00Z",
+  "updated_at": "2023-10-16T14:20:00Z",
+  "images": [
+    {
+      "id": 1,
+      "filename": "1697385600_a3f9c2b8e1d4.jpg",
+      "original_filename": "beach_photo.jpg",
+      "thumbnail_filename": "thumb_1697385600_a3f9c2b8e1d4.jpg",
+      "file_size": 2048576,
+      "width": 1920,
+      "height": 1080,
+      "uploaded_at": "2023-10-15T11:00:00Z"
+    }
+  ]
+}
+```
+
+**PUT /api/galleries/:id**
+```json
+// Request
+{
+  "name": "Updated Gallery Name",
+  "description": "Updated description"
+}
+
+// Response (200)
+{
+  "id": 1,
+  "name": "Updated Gallery Name",
+  "description": "Updated description",
+  "image_count": 15,
+  "created_at": "2023-10-15T10:30:00Z",
+  "updated_at": "2023-10-17T10:00:00Z"
+}
+```
+
+**DELETE /api/galleries/:id**
+```json
+// Response (200)
+{
+  "message": "Gallery deleted successfully"
+}
+```
+
+### Image Endpoints
+
+**POST /api/galleries/:id/images**
+```json
+// Request: multipart/form-data with files[] array
+
+// Response (201)
+{
+  "uploaded": [
+    {
+      "id": 5,
+      "filename": "1697385600_a3f9c2b8e1d4.jpg",
+      "original_filename": "photo1.jpg",
+      "thumbnail_filename": "thumb_1697385600_a3f9c2b8e1d4.jpg",
+      "file_size": 2048576,
+      "width": 1920,
+      "height": 1080,
+      "uploaded_at": "2023-10-17T10:30:00Z"
+    }
+  ]
+}
+```
+
+**GET /api/images/:id**
+- Returns the actual image file (Content-Type: image/jpeg, image/png, etc.)
+- Not JSON response
+
+**DELETE /api/images/:id**
+```json
+// Response (200)
+{
+  "message": "Image deleted successfully"
+}
 ```
 
 ## Out of Scope for MVP
