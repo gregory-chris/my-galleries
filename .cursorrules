@@ -1,0 +1,19 @@
+# Cursor AI Instructions for my-galleries.com
+
+## Primary Reference Documents
+
+**IMPORTANT:** Before writing any code, you MUST read and follow these specification documents:
+
+1. **`spec.md`** - Complete MVP specification with all technical details, validation rules, API formats, and logging requirements
+2. **`plan.md`** - Detailed implementation plan with milestones and specific tasks
+3. **`.github/copilot-instructions.md`** - Code style standards, security requirements, and best practices
+
+These documents contain explicit specifications to avoid assumptions. Always refer to them for:
+
+- Authentication and JWT configuration
+- File upload rules and thumbnail generation
+- Validation patterns and error handling
+- Logging requirements and formats
+- API endpoint specifications
+- Database schema and configuration
+
