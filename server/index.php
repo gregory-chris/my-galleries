@@ -9,6 +9,8 @@ require_once __DIR__ . '/utils/logger.php';
 require_once __DIR__ . '/auth/jwt.php';
 require_once __DIR__ . '/db/users.php';
 require_once __DIR__ . '/db/galleries.php';
+require_once __DIR__ . '/db/images.php';
+require_once __DIR__ . '/uploads/upload_handler.php';
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -596,6 +598,222 @@ $app->delete('/api/galleries/{id}', function (Request $request, Response $respon
         return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
     }
 })->add($authMiddleware);
+
+/**
+ * POST /api/galleries/{id}/images
+ * Upload images to gallery
+ */
+$app->post('/api/galleries/{id}/images', function (Request $request, Response $response, array $args) use ($authMiddleware) {
+    $requestId = $request->getAttribute('request_id');
+    $userId = $request->getAttribute('user_id');
+    $galleryId = (int)$args['id'];
+    
+    try {
+        // Verify gallery ownership
+        if (!verifyGalleryOwnership($galleryId, $userId)) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Gallery not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Get uploaded files
+        $uploadedFiles = $request->getUploadedFiles();
+        
+        if (!isset($uploadedFiles['files']) || empty($uploadedFiles['files'])) {
+            $response->getBody()->write(json_encode([
+                'error' => 'No files uploaded',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+        }
+        
+        $files = $uploadedFiles['files'];
+        
+        // Convert single file to array
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+        
+        // Convert PSR-7 uploaded files to array format for processing
+        $filesArray = [];
+        foreach ($files as $file) {
+            if ($file->getError() === UPLOAD_ERR_OK) {
+                $filesArray[] = [
+                    'name' => $file->getClientFilename(),
+                    'type' => $file->getClientMediaType(),
+                    'tmp_name' => $file->getStream()->getMetadata('uri'),
+                    'error' => $file->getError(),
+                    'size' => $file->getSize()
+                ];
+            }
+        }
+        
+        if (empty($filesArray)) {
+            $response->getBody()->write(json_encode([
+                'error' => 'No valid files to upload',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Calculate total size
+        $totalSize = array_sum(array_column($filesArray, 'size'));
+        
+        // Log upload start
+        logUpload($galleryId, count($filesArray), $totalSize, true, null, $requestId, $userId);
+        
+        // Process batch upload
+        $result = processBatchUpload($filesArray, $requestId);
+        
+        if (!$result['success']) {
+            logUpload($galleryId, count($filesArray), $totalSize, false, implode(', ', $result['errors']), $requestId, $userId);
+            
+            $response->getBody()->write(json_encode([
+                'error' => 'Upload failed: ' . implode(', ', $result['errors']),
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Insert image records into database
+        $uploadedImages = [];
+        foreach ($result['files'] as $file) {
+            $imageId = createImage(
+                $galleryId,
+                $file['filename'],
+                $file['original_filename'],
+                $file['thumbnail_filename'],
+                $file['file_size'],
+                $file['width'],
+                $file['height']
+            );
+            
+            $uploadedImages[] = [
+                'id' => $imageId,
+                'filename' => $file['filename'],
+                'original_filename' => $file['original_filename'],
+                'thumbnail_filename' => $file['thumbnail_filename'],
+                'file_size' => $file['file_size'],
+                'width' => $file['width'],
+                'height' => $file['height'],
+                'uploaded_at' => gmdate('Y-m-d\TH:i:s\Z')
+            ];
+        }
+        
+        // Log successful upload
+        logUpload($galleryId, count($uploadedImages), $totalSize, true, null, $requestId, $userId);
+        
+        $response->getBody()->write(json_encode([
+            'uploaded' => $uploadedImages
+        ]));
+        
+        return $response->withStatus(201)->withHeader('Content-Type', 'application/json');
+        
+    } catch (Exception $e) {
+        logError('Image upload error', ['gallery_id' => $galleryId, 'error' => $e->getMessage()], $e, $requestId, $userId);
+        
+        $response->getBody()->write(json_encode([
+            'error' => 'Failed to upload images',
+            'details' => $e->getMessage(),
+            'request_id' => $requestId
+        ]));
+        
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+})->add($authMiddleware);
+
+/**
+ * DELETE /api/images/{id}
+ * Delete image
+ */
+$app->delete('/api/images/{id}', function (Request $request, Response $response, array $args) use ($authMiddleware) {
+    $requestId = $request->getAttribute('request_id');
+    $userId = $request->getAttribute('user_id');
+    $imageId = (int)$args['id'];
+    
+    try {
+        // Get image
+        $image = getImageById($imageId);
+        
+        if (!$image) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Image not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Verify gallery ownership
+        $galleryId = $image['gallery_id'];
+        if (!verifyGalleryOwnership($galleryId, $userId)) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Image not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Delete files
+        $imagePath = __DIR__ . '/../public/uploads/' . $image['filename'];
+        $thumbPath = __DIR__ . '/../public/uploads/' . $image['thumbnail_filename'];
+        
+        if (file_exists($imagePath)) {
+            unlink($imagePath);
+        }
+        if (file_exists($thumbPath)) {
+            unlink($thumbPath);
+        }
+        
+        // Delete from database
+        deleteImage($imageId);
+        
+        $response->getBody()->write(json_encode([
+            'message' => 'Image deleted successfully'
+        ]));
+        
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+        
+    } catch (Exception $e) {
+        logError('Image delete error', ['image_id' => $imageId, 'error' => $e->getMessage()], $e, $requestId, $userId);
+        
+        $response->getBody()->write(json_encode([
+            'error' => 'Failed to delete image',
+            'details' => $e->getMessage(),
+            'request_id' => $requestId
+        ]));
+        
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+})->add($authMiddleware);
+
+/**
+ * GET /uploads/{filename}
+ * Serve uploaded images
+ */
+$app->get('/uploads/{filename}', function (Request $request, Response $response, array $args) {
+    $filename = $args['filename'];
+    $filePath = __DIR__ . '/../public/uploads/' . $filename;
+    
+    if (!file_exists($filePath)) {
+        return $response->withStatus(404);
+    }
+    
+    // Get mime type
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_file($finfo, $filePath);
+    finfo_close($finfo);
+    
+    // Read file
+    $fileContent = file_get_contents($filePath);
+    
+    $response->getBody()->write($fileContent);
+    
+    return $response
+        ->withHeader('Content-Type', $mimeType)
+        ->withHeader('Content-Length', filesize($filePath));
+});
 
 // Run app
 $app->run();

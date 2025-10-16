@@ -231,124 +231,124 @@ Before starting development, verify the following requirements:
 ## Milestone 5: Image Upload System
 
 ### Backend Upload Handler
-- [ ] Create file validation functions:
-  - [ ] Check file size (max 10MB per file)
-  - [ ] Check batch size (max 20 files, max 200MB total)
-  - [ ] Validate MIME type matches extension
-  - [ ] Allowed: image/jpeg (.jpg/.jpeg), image/png (.png), image/gif (.gif), image/webp (.webp)
-  - [ ] Log validation failures at WARNING level with details
-- [ ] Implement filename generation:
-  - [ ] Format: `{unix_timestamp}_{12_char_random_hash}.{extension}`
-  - [ ] Use `time()` for timestamp
-  - [ ] Generate random hash: `substr(bin2hex(random_bytes(6)), 0, 12)`
-- [ ] Create thumbnail generation with GD:
-  - [ ] Load image based on MIME type (imagecreatefromjpeg, imagecreatefrompng, etc.)
-  - [ ] Calculate dimensions for up to 300x300, preserve aspect ratio
-  - [ ] Create new thumbnail image (max 300x300)
-  - [ ] Copy and resample (maintain aspect ratio, center crop)
-  - [ ] Save as `thumb_{timestamp}_{hash}.{extension}`
-  - [ ] Free memory with imagedestroy()
-  - [ ] Log thumbnail generation failures at ERROR level
-- [ ] Implement batch upload with rollback:
-  - [ ] Track all uploaded files in array
-  - [ ] If any file fails validation/processing:
-    - [ ] Delete all files from current batch
-    - [ ] Delete all thumbnails from current batch
-    - [ ] Log failed upload with `logUpload()` at ERROR level
-    - [ ] Return 400 error with details
-  - [ ] On success: insert all image records to database
-  - [ ] Log successful upload with `logUpload()` at INFO level
-- [ ] Get image dimensions:
-  - [ ] Use getimagesize() to get width and height
-  - [ ] Store in database
-- [ ] Implement POST /api/galleries/:id/images endpoint:
-  - [ ] Verify gallery exists and belongs to user (404 if not)
-  - [ ] Handle multipart/form-data with files[] array
-  - [ ] Return 201 with uploaded array of image objects
-- [ ] Add upload operation logging:
-  - [ ] Log start of upload: gallery ID, file count, total size at INFO level
-  - [ ] Log each successful file upload to `upload.log`
-  - [ ] Log failed uploads with error details to `upload.log` and `error.log`
-  - [ ] Include filenames (server-generated only, not original)
-  - [ ] Log rollback operations when batch fails
+- [x] Create file validation functions:
+  - [x] Check file size (max 10MB per file)
+  - [x] Check batch size (max 20 files, max 200MB total)
+  - [x] Validate MIME type matches extension
+  - [x] Allowed: image/jpeg (.jpg/.jpeg), image/png (.png), image/gif (.gif), image/webp (.webp)
+  - [x] Log validation failures at WARNING level with details
+- [x] Implement filename generation:
+  - [x] Format: `{unix_timestamp}_{12_char_random_hash}.{extension}`
+  - [x] Use `time()` for timestamp
+  - [x] Generate random hash: `substr(bin2hex(random_bytes(6)), 0, 12)`
+- [x] Create thumbnail generation with GD:
+  - [x] Load image based on MIME type (imagecreatefromjpeg, imagecreatefrompng, etc.)
+  - [x] Calculate dimensions for up to 300x300, preserve aspect ratio
+  - [x] Create new thumbnail image (max 300x300)
+  - [x] Copy and resample (maintain aspect ratio, center crop)
+  - [x] Save as `thumb_{timestamp}_{hash}.{extension}`
+  - [x] Free memory with imagedestroy()
+  - [x] Log thumbnail generation failures at ERROR level
+- [x] Implement batch upload with rollback:
+  - [x] Track all uploaded files in array
+  - [x] If any file fails validation/processing:
+    - [x] Delete all files from current batch
+    - [x] Delete all thumbnails from current batch
+    - [x] Log failed upload with `logUpload()` at ERROR level
+    - [x] Return 400 error with details
+  - [x] On success: insert all image records to database
+  - [x] Log successful upload with `logUpload()` at INFO level
+- [x] Get image dimensions:
+  - [x] Use getimagesize() to get width and height
+  - [x] Store in database
+- [x] Implement POST /api/galleries/:id/images endpoint:
+  - [x] Verify gallery exists and belongs to user (404 if not)
+  - [x] Handle multipart/form-data with files[] array
+  - [x] Return 201 with uploaded array of image objects
+- [x] Add upload operation logging:
+  - [x] Log start of upload: gallery ID, file count, total size at INFO level
+  - [x] Log each successful file upload to `upload.log`
+  - [x] Log failed uploads with error details to `upload.log` and `error.log`
+  - [x] Include filenames (server-generated only, not original)
+  - [x] Log rollback operations when batch fails
 
 ### Frontend Upload UI
-- [ ] Create file upload component:
-  - [ ] Drag-and-drop zone
-  - [ ] Click to browse file selector
-  - [ ] Show file previews before upload
-  - [ ] Display file names and sizes
-  - [ ] Allow removing files before upload
-- [ ] Implement client-side validation:
-  - [ ] Check file types (jpg, jpeg, png, gif, webp)
-  - [ ] Check individual file size (10MB)
-  - [ ] Check total files (20 max)
-  - [ ] Check total size (100MB)
-  - [ ] Show validation errors
-- [ ] Add upload progress:
-  - [ ] Progress bar showing upload percentage
-  - [ ] "Uploading X of Y files..." text
-  - [ ] Disable upload button during upload
-- [ ] Handle upload response:
-  - [ ] Show success message with count
-  - [ ] Add uploaded images to gallery view
-  - [ ] Clear upload form
-  - [ ] Show error toast on failure
-- [ ] Create image preview thumbnails after upload
+- [x] Create file upload component:
+  - [x] Drag-and-drop zone
+  - [x] Click to browse file selector
+  - [x] Show file previews before upload
+  - [x] Display file names and sizes
+  - [x] Allow removing files before upload
+- [x] Implement client-side validation:
+  - [x] Check file types (jpg, jpeg, png, gif, webp)
+  - [x] Check individual file size (10MB)
+  - [x] Check total files (20 max)
+  - [x] Check total size (200MB)
+  - [x] Show validation errors
+- [x] Add upload progress:
+  - [x] Progress bar showing upload percentage
+  - [x] "Uploading X of Y files..." text
+  - [x] Disable upload button during upload
+- [x] Handle upload response:
+  - [x] Show success message with count
+  - [x] Add uploaded images to gallery view
+  - [x] Clear upload form
+  - [x] Show error toast on failure
+- [x] Create image preview thumbnails after upload
 
 ## Milestone 6: Gallery & Image Viewing
 
 ### Gallery Detail Page
-- [ ] Create gallery detail page component:
-  - [ ] Display gallery name and description
-  - [ ] Show "Edit Gallery" and "Delete Gallery" buttons
-  - [ ] Show "Upload Images" button
-  - [ ] Display image count
-- [ ] Implement image grid:
-  - [ ] Responsive grid layout (equal-sized thumbnails)
-  - [ ] Display thumbnail_filename for each image
-  - [ ] Show images in upload order (ORDER BY uploaded_at ASC)
-  - [ ] Click thumbnail to open lightbox
-- [ ] Add empty state:
-  - [ ] "No images in this gallery" message
-  - [ ] Photo icon from Heroicons
-  - [ ] "Upload Images" CTA button
-- [ ] Add loading state while fetching gallery data
+- [x] Create gallery detail page component:
+  - [x] Display gallery name and description
+  - [x] Show "Edit Gallery" and "Delete Gallery" buttons
+  - [x] Show "Upload Images" button
+  - [x] Display image count
+- [x] Implement image grid:
+  - [x] Responsive grid layout (equal-sized thumbnails)
+  - [x] Display thumbnail_filename for each image
+  - [x] Show images in upload order (ORDER BY uploaded_at ASC)
+  - [x] Click thumbnail to open lightbox
+- [x] Add empty state:
+  - [x] "No images in this gallery" message
+  - [x] Photo icon from Heroicons
+  - [x] "Upload Images" CTA button
+- [x] Add loading state while fetching gallery data
 
 ### Image Lightbox/Viewer
-- [ ] Create lightbox component:
-  - [ ] Full-screen overlay with dark background
-  - [ ] Display full-size image (filename, not thumbnail)
-  - [ ] Previous/Next navigation buttons
-  - [ ] Close button (X in corner)
-  - [ ] ESC key to close
-  - [ ] Arrow keys for navigation (left/right)
-- [ ] Add image navigation:
-  - [ ] Disable Previous on first image
-  - [ ] Disable Next on last image
-  - [ ] Show current position (e.g., "3 of 15")
-- [ ] Add delete button in lightbox:
-  - [ ] Show confirmation dialog
-  - [ ] Call DELETE /api/images/:id
-  - [ ] Remove from gallery view and close lightbox
-  - [ ] Show error on failure
+- [x] Create lightbox component:
+  - [x] Full-screen overlay with dark background
+  - [x] Display full-size image (filename, not thumbnail)
+  - [x] Previous/Next navigation buttons
+  - [x] Close button (X in corner)
+  - [x] ESC key to close
+  - [x] Arrow keys for navigation (left/right)
+- [x] Add image navigation:
+  - [x] Disable Previous on first image
+  - [x] Disable Next on last image
+  - [x] Show current position (e.g., "3 of 15")
+- [x] Add delete button in lightbox:
+  - [x] Show confirmation dialog
+  - [x] Call DELETE /api/images/:id
+  - [x] Remove from gallery view and close lightbox
+  - [x] Show error on failure
 
 ### Image Deletion
-- [ ] Implement DELETE /api/images/:id endpoint:
-  - [ ] Verify image exists and belongs to user's gallery (404 if not)
-  - [ ] Delete image file from filesystem
-  - [ ] Delete thumbnail from filesystem
-  - [ ] Delete image record from database
-  - [ ] Return 200 with success message
-  - [ ] Log successful deletion at INFO level with image ID and gallery ID
-  - [ ] Log failed deletion at ERROR level with details
-- [ ] Add file deletion logging:
-  - [ ] Log file deletion attempts (success and failure)
-  - [ ] Log filesystem errors (file not found, permission denied)
-  - [ ] Include image filename and gallery context
-- [ ] Add confirmation dialog in frontend:
-  - [ ] "Are you sure you want to delete this image?"
-  - [ ] Cancel and Delete buttons
+- [x] Implement DELETE /api/images/:id endpoint:
+  - [x] Verify image exists and belongs to user's gallery (404 if not)
+  - [x] Delete image file from filesystem
+  - [x] Delete thumbnail from filesystem
+  - [x] Delete image record from database
+  - [x] Return 200 with success message
+  - [x] Log successful deletion at INFO level with image ID and gallery ID
+  - [x] Log failed deletion at ERROR level with details
+- [x] Add file deletion logging:
+  - [x] Log file deletion attempts (success and failure)
+  - [x] Log filesystem errors (file not found, permission denied)
+  - [x] Include image filename and gallery context
+- [x] Add confirmation dialog in frontend:
+  - [x] "Are you sure you want to delete this image?"
+  - [x] Cancel and Delete buttons
 
 ## Milestone 7: Polish & Responsive Design
 
