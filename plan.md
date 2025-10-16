@@ -162,71 +162,71 @@ Before starting development, verify the following requirements:
 
 ## Milestone 3: Gallery Management - Backend
 
-- [ ] Implement validation functions:
-  - [ ] Gallery name: 1-100 chars, pattern `/^[a-zA-Z0-9\s.,\-'!]{1,100}$/`
-  - [ ] Gallery description: 0-500 chars (optional)
-  - [ ] Log validation failures at WARNING level with field name and reason
-- [ ] Create database query functions:
-  - [ ] Get all galleries for user (ORDER BY created_at DESC)
-  - [ ] Get gallery by ID with user authorization check
-  - [ ] Create gallery (insert with UTC timestamps)
-  - [ ] Update gallery (update name, description, updated_at)
-  - [ ] Delete gallery (CASCADE delete images, return affected rows)
-  - [ ] Get image count for gallery
-- [ ] Add database error logging:
-  - [ ] Wrap all queries in try-catch blocks
-  - [ ] Log failed queries with `logDatabase()` or `logError()` at ERROR level
-  - [ ] Include query type, error message, and context
-  - [ ] Log cascade deletes at INFO level with image count
-- [ ] Implement API endpoints with auth middleware:
-  - [ ] GET /api/galleries - List user's galleries with image_count
-  - [ ] POST /api/galleries - Create gallery, return 201 with full object
-  - [ ] GET /api/galleries/:id - Get gallery with images array (404 if not found/not owned)
-  - [ ] PUT /api/galleries/:id - Update gallery (404 if not found/not owned)
-  - [ ] DELETE /api/galleries/:id - Delete gallery and all images/files (404 if not found/not owned)
-- [ ] Add authorization checks:
-  - [ ] Verify gallery belongs to authenticated user
-  - [ ] Return 404 (not 403) for galleries user doesn't own (security best practice)
-  - [ ] Log authorization failures at INFO level (404 responses)
-- [ ] Add error logging to all endpoints:
-  - [ ] Call `logError()` before returning error responses
-  - [ ] Include request_id in error response
-  - [ ] Log validation errors at WARNING level
-  - [ ] Log not found errors at INFO level
-  - [ ] Log server errors at ERROR level with stack trace
+- [x] Implement validation functions:
+  - [x] Gallery name: 1-100 chars, pattern `/^[a-zA-Z0-9\s.,\-'!]{1,100}$/`
+  - [x] Gallery description: 0-500 chars (optional)
+  - [x] Log validation failures at WARNING level with field name and reason
+- [x] Create database query functions:
+  - [x] Get all galleries for user (ORDER BY created_at DESC)
+  - [x] Get gallery by ID with user authorization check
+  - [x] Create gallery (insert with UTC timestamps)
+  - [x] Update gallery (update name, description, updated_at)
+  - [x] Delete gallery (CASCADE delete images, return affected rows)
+  - [x] Get image count for gallery
+- [x] Add database error logging:
+  - [x] Wrap all queries in try-catch blocks
+  - [x] Log failed queries with `logDatabase()` or `logError()` at ERROR level
+  - [x] Include query type, error message, and context
+  - [x] Log cascade deletes at INFO level with image count
+- [x] Implement API endpoints with auth middleware:
+  - [x] GET /api/galleries - List user's galleries with image_count
+  - [x] POST /api/galleries - Create gallery, return 201 with full object
+  - [x] GET /api/galleries/:id - Get gallery with images array (404 if not found/not owned)
+  - [x] PUT /api/galleries/:id - Update gallery (404 if not found/not owned)
+  - [x] DELETE /api/galleries/:id - Delete gallery and all images/files (404 if not found/not owned)
+- [x] Add authorization checks:
+  - [x] Verify gallery belongs to authenticated user
+  - [x] Return 404 (not 403) for galleries user doesn't own (security best practice)
+  - [x] Log authorization failures at INFO level (404 responses)
+- [x] Add error logging to all endpoints:
+  - [x] Call `logError()` before returning error responses
+  - [x] Include request_id in error response
+  - [x] Log validation errors at WARNING level
+  - [x] Log not found errors at INFO level
+  - [x] Log server errors at ERROR level with stack trace
 
 ## Milestone 4: Gallery Management - Frontend
 
-- [ ] Create API client functions for galleries:
-  - [ ] fetchGalleries()
-  - [ ] createGallery(name, description)
-  - [ ] updateGallery(id, name, description)
-  - [ ] deleteGallery(id)
-  - [ ] fetchGallery(id)
-- [ ] Build dashboard/home page:
-  - [ ] Responsive grid layout (3 cols desktop, 2 tablet, 1 mobile)
-  - [ ] Gallery cards with name, image count, thumbnail (first image or placeholder)
-  - [ ] "Create Gallery" button
-  - [ ] Empty state: "No galleries yet" with icon and CTA button
-  - [ ] Loading state: centered spinner with "Loading..." text
-- [ ] Create gallery creation modal:
-  - [ ] Name input (required, 1-100 chars validation)
-  - [ ] Description textarea (optional, 0-500 chars)
-  - [ ] Form validation with error messages
-  - [ ] Submit button (disabled during API call)
-  - [ ] Close on successful creation
-- [ ] Create gallery edit modal:
-  - [ ] Pre-populate with existing name and description
-  - [ ] Same validation as creation
-  - [ ] Update gallery on submit
-- [ ] Implement gallery deletion:
-  - [ ] Confirmation dialog: "Are you sure? This will delete all images."
-  - [ ] Call DELETE endpoint
-  - [ ] Remove from local state on success
-  - [ ] Show error toast on failure
-- [ ] Add error handling:
-  - [ ] Toast/alert for errors (show error.error field)
-  - [ ] Console log full error response (error.details)
+- [x] Create API client functions for galleries:
+  - [x] fetchGalleries()
+  - [x] createGallery(name, description)
+  - [x] updateGallery(id, name, description)
+  - [x] deleteGallery(id)
+  - [x] fetchGallery(id)
+- [x] Build dashboard/home page:
+  - [x] Responsive grid layout (3 cols desktop, 2 tablet, 1 mobile)
+  - [x] Gallery cards with name, image count, thumbnail (first image or placeholder)
+  - [x] "Create Gallery" button
+  - [x] Empty state: "No galleries yet" with icon and CTA button
+  - [x] Loading state: centered spinner with "Loading..." text
+- [x] Create gallery creation modal:
+  - [x] Name input (required, 1-100 chars validation)
+  - [x] Description textarea (optional, 0-500 chars)
+  - [x] Form validation with error messages
+  - [x] Submit button (disabled during API call)
+  - [x] Close on successful creation
+- [x] Create gallery edit modal:
+  - [x] Pre-populate with existing name and description
+  - [x] Same validation as creation
+  - [x] Update gallery on submit
+- [x] Implement gallery deletion:
+  - [x] Confirmation dialog: "Are you sure? This will delete all images."
+  - [x] Call DELETE endpoint
+  - [x] Remove from local state on success
+  - [x] Show error toast on failure
+- [x] Add error handling:
+  - [x] Toast/alert for errors (show error.error field)
+  - [x] Console log full error response (error.details)
 
 ## Milestone 5: Image Upload System
 

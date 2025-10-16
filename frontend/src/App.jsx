@@ -4,6 +4,7 @@ import Navbar from './components/Layout/Navbar';
 import ProtectedRoute from './components/Layout/ProtectedRoute';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import GalleryDetail from './pages/GalleryDetail';
 
 function App() {
   return (
@@ -18,6 +19,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gallery/:id"
+              element={
+                <ProtectedRoute>
+                  <GalleryDetail />
                 </ProtectedRoute>
               }
             />
