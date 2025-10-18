@@ -32,28 +32,56 @@ async function apiRequest(endpoint, options = {}) {
     headers,
   };
   
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  
-  const data = await response.json();
-  
-  if (!response.ok) {
-    // Log error details to console
-    console.error('API Error:', {
-      status: response.status,
-      error: data.error,
-      details: data.details,
-      request_id: data.request_id,
-    });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     
-    // Throw error with user-friendly message
-    const error = new Error(data.error || 'Request failed');
-    error.status = response.status;
-    error.requestId = data.request_id;
-    error.details = data.details;
-    throw error;
+    // Handle network errors or non-JSON responses
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error('Failed to parse JSON response:', jsonError);
+      throw new Error('Server returned invalid response. Please try again.');
+    }
+    
+    if (!response.ok) {
+      // Handle 401 - Token expired or invalid
+      if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        const error = new Error('Your session has expired. Please login again.');
+        error.status = 401;
+        error.requestId = data.request_id;
+        throw error;
+      }
+      
+      // Log error details to console
+      console.error('API Error:', {
+        status: response.status,
+        error: data.error,
+        details: data.details,
+        request_id: data.request_id,
+      });
+      
+      // Throw error with user-friendly message
+      const error = new Error(data.error || 'Request failed');
+      error.status = response.status;
+      error.requestId = data.request_id;
+      error.details = data.details;
+      throw error;
+    }
+    
+    return data;
+  } catch (err) {
+    // Handle network errors
+    if (err instanceof TypeError && err.message === 'Failed to fetch') {
+      const error = new Error('Network error. Please check your internet connection and try again.');
+      error.isNetworkError = true;
+      throw error;
+    }
+    
+    // Re-throw other errors
+    throw err;
   }
-  
-  return data;
 }
 
 /**
@@ -176,26 +204,45 @@ export const images = {
     
     const token = getAuthToken();
     
-    const response = await fetch(`${API_BASE_URL}/galleries/${galleryId}/images`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Upload Error:', data);
-      const error = new Error(data.error || 'Upload failed');
-      error.status = response.status;
-      error.requestId = data.request_id;
-      error.details = data.details;
-      throw error;
+    try {
+      const response = await fetch(`${API_BASE_URL}/galleries/${galleryId}/images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error('Server returned invalid response. Please try again.');
+      }
+      
+      if (!response.ok) {
+        // Handle 401 - Token expired
+        if (response.status === 401) {
+          localStorage.removeItem('auth_token');
+          throw new Error('Your session has expired. Please login again.');
+        }
+        
+        console.error('Upload Error:', data);
+        const error = new Error(data.error || 'Upload failed');
+        error.status = response.status;
+        error.requestId = data.request_id;
+        error.details = data.details;
+        throw error;
+      }
+      
+      return data;
+    } catch (err) {
+      // Handle network errors
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      throw err;
     }
-    
-    return data;
   },
   
   /**

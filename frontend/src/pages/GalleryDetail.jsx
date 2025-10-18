@@ -136,10 +136,10 @@ export default function GalleryDetail() {
   
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading gallery...</p>
+          <p className="text-sm sm:text-base text-gray-600">Loading gallery...</p>
         </div>
       </div>
     );
@@ -147,9 +147,10 @@ export default function GalleryDetail() {
   
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg">
-          {error}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="font-medium">Error</p>
+          <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
     );
@@ -160,35 +161,35 @@ export default function GalleryDetail() {
   }
   
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
         >
           <ArrowLeftIcon className="w-5 h-5" />
-          Back to Galleries
+          <span className="text-sm sm:text-base">Back to Galleries</span>
         </button>
         
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{gallery.name}</h1>
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">{gallery.name}</h1>
             {gallery.description && (
-              <p className="text-gray-600">{gallery.description}</p>
+              <p className="text-gray-600 text-sm sm:text-base">{gallery.description}</p>
             )}
             <p className="text-sm text-gray-500 mt-2">
               {images.length} image{images.length !== 1 ? 's' : ''}
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setShowUpload(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
               <CloudArrowUpIcon className="w-5 h-5" />
-              Upload Images
+              <span>Upload</span>
             </button>
             <button
               onClick={handleDeleteGallery}
@@ -203,23 +204,23 @@ export default function GalleryDetail() {
       
       {/* Images Grid */}
       {images.length === 0 ? (
-        <div className="text-center py-16">
-          <PhotoIcon className="w-24 h-24 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No images yet</h3>
-          <p className="text-gray-600 mb-6">Upload your first images to this gallery</p>
+        <div className="text-center py-12 sm:py-16">
+          <PhotoIcon className="w-16 sm:w-24 h-16 sm:h-24 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No images yet</h3>
+          <p className="text-sm sm:text-base text-gray-600 mb-6">Upload your first images to this gallery</p>
           <button
             onClick={() => setShowUpload(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
           >
             Upload Images
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
           {images.map((image) => (
             <div
               key={image.id}
-              className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer group relative"
+              className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer group relative transition-transform hover:scale-[1.02]"
               onClick={() => openLightbox(image)}
             >
               <img
@@ -227,7 +228,7 @@ export default function GalleryDetail() {
                 alt={image.original_filename}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity" />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-200" />
             </div>
           ))}
         </div>
@@ -244,23 +245,23 @@ export default function GalleryDetail() {
       
       {/* Lightbox */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center animate-fade-in">
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-light"
+            className="absolute top-2 sm:top-4 right-2 sm:right-4 text-white hover:text-gray-300 text-4xl font-light z-10 w-10 h-10 sm:w-auto sm:h-auto flex items-center justify-center"
           >
             ×
           </button>
           
           <button
             onClick={() => handleDeleteImage(selectedImage.id)}
-            className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="absolute top-2 sm:top-4 left-2 sm:left-4 flex items-center gap-2 px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors z-10 text-sm sm:text-base"
           >
-            <TrashIcon className="w-5 h-5" />
-            Delete
+            <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Delete</span>
           </button>
           
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+          <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
             {images.findIndex(img => img.id === selectedImage.id) + 1} of {images.length}
           </div>
           
@@ -271,7 +272,7 @@ export default function GalleryDetail() {
                   e.stopPropagation();
                   navigateImage('prev');
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 text-5xl font-light px-4"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 text-4xl sm:text-5xl font-light px-2 sm:px-4 bg-black bg-opacity-30 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center"
               >
                 ‹
               </button>
@@ -280,7 +281,7 @@ export default function GalleryDetail() {
                   e.stopPropagation();
                   navigateImage('next');
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 text-5xl font-light px-4"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 text-4xl sm:text-5xl font-light px-2 sm:px-4 bg-black bg-opacity-30 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center"
               >
                 ›
               </button>
@@ -290,7 +291,7 @@ export default function GalleryDetail() {
           <img
             src={`http://localhost:8000/uploads/${selectedImage.filename}`}
             alt={selectedImage.original_filename}
-            className="max-w-[90vw] max-h-[90vh] object-contain"
+            className="max-w-[90vw] max-h-[80vh] sm:max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         </div>

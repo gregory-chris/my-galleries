@@ -28,16 +28,16 @@ export default function Navbar() {
   
   return (
     <>
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">My Galleries</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Galleries</h1>
             </Link>
             
             {/* Right side - Auth */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {isAuthenticated ? (
                 <div className="relative">
                   <button
@@ -45,7 +45,7 @@ export default function Navbar() {
                     className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     <UserCircleIcon className="w-8 h-8" />
-                    <span className="hidden sm:inline text-sm font-medium">{user?.email}</span>
+                    <span className="hidden sm:inline text-sm font-medium truncate max-w-[150px]">{user?.email}</span>
                   </button>
                   
                   {/* Dropdown menu */}
@@ -74,16 +74,16 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     onClick={() => setShowLoginModal(true)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
                   >
                     Login
                   </button>
                   <button
                     onClick={() => setShowSignupModal(true)}
-                    className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-3 sm:px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Sign Up
                   </button>

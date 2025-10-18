@@ -171,8 +171,8 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
   };
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Upload Images</h2>
@@ -188,15 +188,16 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {error && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
-              {error}
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+              <p className="font-medium">Upload Error</p>
+              <p className="mt-1">{error}</p>
             </div>
           )}
           
           {/* Upload Zone */}
           {previews.length === 0 && (
             <div
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+              className={`border-2 border-dashed rounded-lg p-8 sm:p-12 text-center transition-colors ${
                 dragActive
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-300 hover:border-gray-400'
@@ -206,8 +207,8 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              <CloudArrowUpIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-900 mb-2">
+              <CloudArrowUpIcon className="w-12 sm:w-16 h-12 sm:h-16 mx-auto text-gray-400 mb-4" />
+              <p className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                 Drag and drop images here
               </p>
               <p className="text-sm text-gray-600 mb-4">
@@ -215,7 +216,7 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 disabled={uploading}
               >
                 Select Files
@@ -259,20 +260,20 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
                 />
               </div>
               
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
                     <img
                       src={preview.url}
                       alt={preview.name}
-                      className="w-full h-32 object-cover rounded-lg"
+                      className="w-full h-24 sm:h-32 object-cover rounded-lg"
                     />
                     {!uploading && (
                       <button
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-red-500 text-white p-1 rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <XMarkIcon className="w-4 h-4" />
+                        <XMarkIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     )}
                     <div className="mt-1 text-xs text-gray-600 truncate">
