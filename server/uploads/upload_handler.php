@@ -211,8 +211,13 @@ function processFile($file, $requestId = null) {
     $thumbnailPath = UPLOAD_DIR . $thumbnailFilename;
     
     // Move uploaded file
-    if (!move_uploaded_file($file['tmp_name'], $filePath)) {
-        return ['success' => false, 'errors' => ['Failed to save uploaded file']];
+    // Use rename() instead of move_uploaded_file() since PSR-7 already moved the file to temp location
+    if (!rename($file['tmp_name'], $filePath)) {
+        // If rename fails, try copy and delete as fallback
+        if (!copy($file['tmp_name'], $filePath)) {
+            return ['success' => false, 'errors' => ['Failed to save uploaded file']];
+        }
+        @unlink($file['tmp_name']);
     }
     
     // Get image dimensions

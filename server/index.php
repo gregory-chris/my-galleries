@@ -640,10 +640,14 @@ $app->post('/api/galleries/{id}/images', function (Request $request, Response $r
         $filesArray = [];
         foreach ($files as $file) {
             if ($file->getError() === UPLOAD_ERR_OK) {
+                // Save PSR-7 uploaded file to a temporary location first
+                $tmpName = tempnam(sys_get_temp_dir(), 'upload_');
+                $file->moveTo($tmpName);
+                
                 $filesArray[] = [
                     'name' => $file->getClientFilename(),
                     'type' => $file->getClientMediaType(),
-                    'tmp_name' => $file->getStream()->getMetadata('uri'),
+                    'tmp_name' => $tmpName,
                     'error' => $file->getError(),
                     'size' => $file->getSize()
                 ];

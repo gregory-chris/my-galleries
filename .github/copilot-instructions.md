@@ -29,6 +29,11 @@ This is a personal photo gallery management system where users can upload, organ
 
 - Maintain .gitignore file to exclude files and folders that should not be part of the repository
 
+### Code generation
+
+- Don't create additional documentation files, unless clearly demanded in the prompt
+- Don't create helper scripts (like bash or any other command line helper tools) unless clearly demanded in the prompt
+
 ### JavaScript/React
 
 - Use functional components with hooks

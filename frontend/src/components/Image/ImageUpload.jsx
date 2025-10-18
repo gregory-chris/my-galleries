@@ -1,10 +1,19 @@
 import { useState, useRef } from 'react';
 import { XMarkIcon, PhotoIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import uploadLimits from '../../config/upload-limits.json';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_FILES = 20;
-const MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+// Use server-side configuration values
+const MAX_FILE_SIZE = uploadLimits.upload.maxFileSize;
+const MAX_FILES = uploadLimits.upload.maxFiles;
+const MAX_TOTAL_SIZE = uploadLimits.upload.maxTotalSize;
+const ALLOWED_TYPES = uploadLimits.upload.allowedTypes;
+
+// Format bytes to human readable
+const formatBytes = (bytes) => {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
 
 export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
   const [files, setFiles] = useState([]);
@@ -28,11 +37,11 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
     let totalSize = 0;
     for (const file of filesToValidate) {
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`${file.name}: File size exceeds 10MB limit`);
+        errors.push(`${file.name}: File size exceeds ${formatBytes(MAX_FILE_SIZE)} limit`);
       }
       
       if (!ALLOWED_TYPES.includes(file.type)) {
-        errors.push(`${file.name}: Invalid file type. Allowed: JPEG, PNG, GIF, WEBP`);
+        errors.push(`${file.name}: Invalid file type. Allowed: ${uploadLimits.upload.allowedExtensions.map(e => e.toUpperCase()).join(', ')}`);
       }
       
       totalSize += file.size;
@@ -40,7 +49,7 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
     
     // Check total size
     if (totalSize > MAX_TOTAL_SIZE) {
-      errors.push(`Total size exceeds 200MB limit`);
+      errors.push(`Total size exceeds ${formatBytes(MAX_TOTAL_SIZE)} limit`);
     }
     
     return errors;
@@ -55,6 +64,17 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
     }
     
     setError('');
+    
+    // Calculate total size for display
+    const totalSize = Array.from(newFiles).reduce((sum, file) => sum + file.size, 0);
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+    
+    // Show warning if approaching limits (75% of max)
+    const warningThreshold = MAX_TOTAL_SIZE * 0.75;
+    if (totalSize > warningThreshold) {
+      setError(`Warning: Total size is ${totalSizeMB}MB (approaching ${formatBytes(MAX_TOTAL_SIZE)} limit). Upload may take longer.`);
+    }
+    
     setFiles(newFiles);
     
     // Create previews
@@ -108,11 +128,8 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
     setPreviews(newPreviews);
   };
   
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  // Use the formatBytes function defined at the top instead
+  const formatFileSize = formatBytes;
   
   const handleUpload = async () => {
     if (files.length === 0) {
@@ -230,7 +247,7 @@ export default function ImageUpload({ galleryId, onUploadSuccess, onClose }) {
                 className="hidden"
               />
               <p className="text-xs text-gray-500 mt-4">
-                Max {MAX_FILES} files • Max 10MB per file • Max 200MB total
+                Max {MAX_FILES} files • Max {formatBytes(MAX_FILE_SIZE)} per file • Max {formatBytes(MAX_TOTAL_SIZE)} total
               </p>
             </div>
           )}
