@@ -243,6 +243,168 @@ function validateGalleryDescription($description) {
     return null;
 }
 
+/**
+ * Generate a unique 6-character share hash
+ * 
+ * @return string
+ */
+function generateUniqueShareHash() {
+    $pdo = getDbConnection();
+    $maxAttempts = 10;
+    $attempts = 0;
+    
+    while ($attempts < $maxAttempts) {
+        // Generate 6-character hash
+        $hash = substr(bin2hex(random_bytes(3)), 0, 6);
+        
+        try {
+            // Check if hash already exists
+            $stmt = $pdo->prepare('SELECT id FROM galleries WHERE share_hash = :hash');
+            $stmt->execute(['hash' => $hash]);
+            
+            if (!$stmt->fetch()) {
+                // Hash is unique
+                return $hash;
+            }
+            
+            $attempts++;
+        } catch (PDOException $e) {
+            logError('Failed to check hash uniqueness', ['hash' => $hash, 'error' => $e->getMessage()], $e);
+            $attempts++;
+        }
+    }
+    
+    // If we couldn't generate a unique hash after max attempts
+    throw new Exception('Failed to generate unique share hash after ' . $maxAttempts . ' attempts');
+}
+
+/**
+ * Enable public sharing for a gallery
+ * 
+ * @param int $galleryId
+ * @param int $userId
+ * @return array|false Returns gallery data with share_hash, or false on failure
+ */
+function enableGallerySharing($galleryId, $userId) {
+    $pdo = getDbConnection();
+    
+    try {
+        // Verify ownership
+        if (!verifyGalleryOwnership($galleryId, $userId)) {
+            return false;
+        }
+        
+        // Get current gallery
+        $gallery = getGalleryById($galleryId);
+        
+        if (!$gallery) {
+            return false;
+        }
+        
+        // If already has a hash, just enable it
+        if (!empty($gallery['share_hash'])) {
+            $stmt = $pdo->prepare('
+                UPDATE galleries 
+                SET is_public = 1, updated_at = datetime("now", "utc")
+                WHERE id = :id
+            ');
+            $stmt->execute(['id' => $galleryId]);
+        } else {
+            // Generate new hash and enable
+            $hash = generateUniqueShareHash();
+            $stmt = $pdo->prepare('
+                UPDATE galleries 
+                SET share_hash = :hash, is_public = 1, shared_at = datetime("now", "utc"), updated_at = datetime("now", "utc")
+                WHERE id = :id
+            ');
+            $stmt->execute([
+                'id' => $galleryId,
+                'hash' => $hash
+            ]);
+        }
+        
+        // Return updated gallery
+        return getGalleryById($galleryId);
+        
+    } catch (Exception $e) {
+        logError('Failed to enable gallery sharing', ['gallery_id' => $galleryId, 'error' => $e->getMessage()], $e);
+        throw $e;
+    }
+}
+
+/**
+ * Disable public sharing for a gallery
+ * 
+ * @param int $galleryId
+ * @param int $userId
+ * @return bool
+ */
+function disableGallerySharing($galleryId, $userId) {
+    $pdo = getDbConnection();
+    
+    try {
+        // Verify ownership
+        if (!verifyGalleryOwnership($galleryId, $userId)) {
+            return false;
+        }
+        
+        // Set is_public to 0 (keep hash for potential re-enabling)
+        $stmt = $pdo->prepare('
+            UPDATE galleries 
+            SET is_public = 0, updated_at = datetime("now", "utc")
+            WHERE id = :id
+        ');
+        $stmt->execute(['id' => $galleryId]);
+        
+        return $stmt->rowCount() > 0;
+        
+    } catch (PDOException $e) {
+        logError('Failed to disable gallery sharing', ['gallery_id' => $galleryId, 'error' => $e->getMessage()], $e);
+        throw $e;
+    }
+}
+
+/**
+ * Get gallery by share hash (public endpoint)
+ * 
+ * @param string $hash
+ * @return array|false Returns gallery with images if public, false otherwise
+ */
+function getGalleryByShareHash($hash) {
+    $pdo = getDbConnection();
+    
+    try {
+        // Get gallery by hash (only if is_public = 1)
+        $stmt = $pdo->prepare('
+            SELECT * FROM galleries 
+            WHERE share_hash = :hash AND is_public = 1
+        ');
+        $stmt->execute(['hash' => $hash]);
+        $gallery = $stmt->fetch();
+        
+        if (!$gallery) {
+            return false;
+        }
+        
+        // Get images
+        $stmt = $pdo->prepare('
+            SELECT * FROM images 
+            WHERE gallery_id = :gallery_id 
+            ORDER BY uploaded_at ASC
+        ');
+        $stmt->execute(['gallery_id' => $gallery['id']]);
+        $images = $stmt->fetchAll();
+        
+        $gallery['images'] = $images;
+        
+        return $gallery;
+        
+    } catch (PDOException $e) {
+        logError('Failed to get gallery by share hash', ['hash' => $hash, 'error' => $e->getMessage()], $e);
+        throw $e;
+    }
+}
+
 
 
 

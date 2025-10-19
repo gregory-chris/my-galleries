@@ -186,6 +186,48 @@ export const galleries = {
       method: 'DELETE',
     });
   },
+  
+  /**
+   * Enable public sharing for gallery
+   */
+  async enableSharing(id) {
+    return await apiRequest(`/galleries/${id}/share`, {
+      method: 'POST',
+    });
+  },
+  
+  /**
+   * Disable public sharing for gallery
+   */
+  async disableSharing(id) {
+    return await apiRequest(`/galleries/${id}/share`, {
+      method: 'DELETE',
+    });
+  },
+  
+  /**
+   * Get public gallery by share hash (no authentication required)
+   */
+  async getByShareHash(hash) {
+    const response = await fetch(`http://localhost:8000/s/${hash}`);
+    
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      throw new Error('Server returned invalid response. Please try again.');
+    }
+    
+    if (!response.ok) {
+      console.error('Public Gallery Error:', data);
+      const error = new Error(data.error || 'Failed to load gallery');
+      error.status = response.status;
+      error.requestId = data.request_id;
+      throw error;
+    }
+    
+    return data;
+  },
 };
 
 /**

@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS galleries (
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
+    share_hash TEXT UNIQUE,
+    is_public INTEGER DEFAULT 0,
+    shared_at DATETIME,
     created_at DATETIME DEFAULT (datetime('now', 'utc')),
     updated_at DATETIME DEFAULT (datetime('now', 'utc')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -37,6 +40,7 @@ CREATE TABLE IF NOT EXISTS images (
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_galleries_user_id ON galleries(user_id);
+CREATE INDEX IF NOT EXISTS idx_galleries_share_hash ON galleries(share_hash);
 CREATE INDEX IF NOT EXISTS idx_images_gallery_id ON images(gallery_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 

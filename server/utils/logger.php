@@ -16,6 +16,7 @@ define('LOG_TYPE_AUTH', 'auth');
 define('LOG_TYPE_UPLOAD', 'upload');
 define('LOG_TYPE_ERROR', 'error');
 define('LOG_TYPE_DATABASE', 'database');
+define('LOG_TYPE_SHARE', 'share');
 
 // Log directory
 define('LOG_DIR', __DIR__ . '/../../logs/');
@@ -178,6 +179,24 @@ function logDatabase($query, $success, $errorMessage = null, $requestId = null) 
 }
 
 /**
+ * Log gallery sharing event
+ */
+function logShare($event, $galleryId, $userId = null, $shareHash = null, $requestId = null) {
+    $context = [
+        'event' => $event,
+        'gallery_id' => $galleryId,
+    ];
+    
+    if ($shareHash !== null) {
+        $context['share_hash'] = $shareHash;
+    }
+    
+    $message = ucfirst($event) . ' gallery sharing';
+    
+    writeLog(APP_LOG_INFO, LOG_TYPE_SHARE, $message, $context, $requestId, $userId);
+}
+
+/**
  * Rotate logs monthly
  */
 function rotateLogs() {
@@ -189,7 +208,7 @@ function rotateLogs() {
     }
     $rotated = true;
     
-    $logTypes = [LOG_TYPE_REQUEST, LOG_TYPE_AUTH, LOG_TYPE_UPLOAD, LOG_TYPE_ERROR, LOG_TYPE_DATABASE];
+    $logTypes = [LOG_TYPE_REQUEST, LOG_TYPE_AUTH, LOG_TYPE_UPLOAD, LOG_TYPE_ERROR, LOG_TYPE_DATABASE, LOG_TYPE_SHARE];
     $currentMonth = gmdate('Y-m');
     
     foreach ($logTypes as $type) {

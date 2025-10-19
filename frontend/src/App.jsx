@@ -6,6 +6,7 @@ import ProtectedRoute from './components/Layout/ProtectedRoute';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import GalleryDetail from './pages/GalleryDetail';
+import PublicGallery from './pages/PublicGallery';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/s/:hash" element={<PublicGallery />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

@@ -155,7 +155,15 @@ Users can create multiple galleries, upload images, and browse their collection 
 - Basic slideshow/carousel navigation
 - Previous/Next navigation buttons
 
-### 5. Basic UI Components
+### 5. Public Gallery Sharing
+
+- Generate short shareable URLs for galleries
+- Toggle sharing on/off at any time
+- Public viewers can browse images without authentication
+- Share links format: `/s/{6-char-hash}`
+- Read-only access (no edit/delete capabilities)
+
+### 6. Basic UI Components
 
 - Responsive navigation bar
 - Dashboard/home page showing user galleries
@@ -272,6 +280,9 @@ Users can create multiple galleries, upload images, and browse their collection 
 - user_id (INTEGER FOREIGN KEY)
 - name (TEXT)
 - description (TEXT)
+- share_hash (TEXT UNIQUE) COMMENT '6-character unique identifier for public URLs'
+- is_public (INTEGER DEFAULT 0) COMMENT 'Boolean flag to enable/disable sharing (0=private, 1=public)'
+- shared_at (DATETIME) COMMENT 'UTC timestamp when sharing was first enabled'
 - created_at (DATETIME)
 - updated_at (DATETIME)
 ```
@@ -306,6 +317,12 @@ Users can create multiple galleries, upload images, and browse their collection 
 - `GET /api/galleries/:id` - Get gallery details with images
 - `PUT /api/galleries/:id` - Update gallery
 - `DELETE /api/galleries/:id` - Delete gallery
+- `POST /api/galleries/:id/share` - Enable public sharing for gallery
+- `DELETE /api/galleries/:id/share` - Disable public sharing for gallery
+
+### Public Sharing
+
+- `GET /s/:hash` - Get public gallery by share hash (no authentication required)
 
 ### Images
 
@@ -803,6 +820,53 @@ All error responses must follow this JSON structure:
 }
 ```
 
+**POST /api/galleries/:id/share**
+```json
+// Response (200)
+{
+  "share_hash": "a3f9c2",
+  "share_url": "https://my-galleries.com/s/a3f9c2",
+  "is_public": true
+}
+```
+
+**DELETE /api/galleries/:id/share**
+```json
+// Response (200)
+{
+  "message": "Sharing disabled successfully"
+}
+```
+
+### Public Sharing Endpoints
+
+**GET /s/:hash**
+```json
+// Response (200)
+{
+  "id": 1,
+  "name": "Summer Vacation",
+  "description": "Photos from our trip",
+  "share_hash": "a3f9c2",
+  "is_public": 1,
+  "shared_at": "2023-10-15T10:30:00Z",
+  "created_at": "2023-10-15T10:30:00Z",
+  "updated_at": "2023-10-16T14:20:00Z",
+  "images": [
+    {
+      "id": 1,
+      "filename": "1697385600_a3f9c2b8e1d4.jpg",
+      "original_filename": "beach_photo.jpg",
+      "thumbnail_filename": "thumb_1697385600_a3f9c2b8e1d4.jpg",
+      "file_size": 2048576,
+      "width": 1920,
+      "height": 1080,
+      "uploaded_at": "2023-10-15T11:00:00Z"
+    }
+  ]
+}
+```
+
 ### Image Endpoints
 
 **POST /api/galleries/:id/images**
@@ -842,7 +906,6 @@ All error responses must follow this JSON structure:
 
 - Video uploads
 - User collaboration/sharing galleries
-- Public URL sharing
 - Advanced search functionality
 - Image editing
 - Tags and metadata

@@ -600,6 +600,95 @@ $app->delete('/api/galleries/{id}', function (Request $request, Response $respon
 })->add($authMiddleware);
 
 /**
+ * POST /api/galleries/{id}/share
+ * Enable public sharing for a gallery
+ */
+$app->post('/api/galleries/{id}/share', function (Request $request, Response $response, array $args) use ($authMiddleware) {
+    $requestId = $request->getAttribute('request_id');
+    $userId = $request->getAttribute('user_id');
+    $galleryId = (int)$args['id'];
+    
+    try {
+        // Enable sharing
+        $gallery = enableGallerySharing($galleryId, $userId);
+        
+        if (!$gallery) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Gallery not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Log share enable
+        logShare('enable', $galleryId, $userId, $gallery['share_hash'], $requestId);
+        
+        // Return gallery with share URL
+        $response->getBody()->write(json_encode([
+            'share_hash' => $gallery['share_hash'],
+            'share_url' => 'https://my-galleries.com/s/' . $gallery['share_hash'],
+            'is_public' => (bool)$gallery['is_public']
+        ]));
+        
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+        
+    } catch (Exception $e) {
+        logError('Enable sharing error', ['gallery_id' => $galleryId, 'error' => $e->getMessage()], $e, $requestId, $userId);
+        
+        $response->getBody()->write(json_encode([
+            'error' => 'Failed to enable sharing',
+            'details' => $e->getMessage(),
+            'request_id' => $requestId
+        ]));
+        
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+})->add($authMiddleware);
+
+/**
+ * DELETE /api/galleries/{id}/share
+ * Disable public sharing for a gallery
+ */
+$app->delete('/api/galleries/{id}/share', function (Request $request, Response $response, array $args) use ($authMiddleware) {
+    $requestId = $request->getAttribute('request_id');
+    $userId = $request->getAttribute('user_id');
+    $galleryId = (int)$args['id'];
+    
+    try {
+        // Disable sharing
+        $success = disableGallerySharing($galleryId, $userId);
+        
+        if (!$success) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Gallery not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Log share disable
+        logShare('disable', $galleryId, $userId, null, $requestId);
+        
+        $response->getBody()->write(json_encode([
+            'message' => 'Sharing disabled successfully'
+        ]));
+        
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+        
+    } catch (Exception $e) {
+        logError('Disable sharing error', ['gallery_id' => $galleryId, 'error' => $e->getMessage()], $e, $requestId, $userId);
+        
+        $response->getBody()->write(json_encode([
+            'error' => 'Failed to disable sharing',
+            'details' => $e->getMessage(),
+            'request_id' => $requestId
+        ]));
+        
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+})->add($authMiddleware);
+
+/**
  * POST /api/galleries/{id}/images
  * Upload images to gallery
  */
@@ -791,6 +880,49 @@ $app->delete('/api/images/{id}', function (Request $request, Response $response,
         return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
     }
 })->add($authMiddleware);
+
+/**
+ * GET /s/{hash}
+ * Get public gallery by share hash (no authentication required)
+ */
+$app->get('/s/{hash}', function (Request $request, Response $response, array $args) {
+    $requestId = $request->getAttribute('request_id');
+    $hash = $args['hash'];
+    
+    try {
+        // Get gallery by share hash
+        $gallery = getGalleryByShareHash($hash);
+        
+        if (!$gallery) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Gallery not found',
+                'request_id' => $requestId
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+        }
+        
+        // Log public access
+        logShare('public_access', $gallery['id'], null, $hash, $requestId);
+        
+        // Return gallery (without user_id for privacy)
+        unset($gallery['user_id']);
+        
+        $response->getBody()->write(json_encode($gallery));
+        
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+        
+    } catch (Exception $e) {
+        logError('Public gallery access error', ['hash' => $hash, 'error' => $e->getMessage()], $e, $requestId);
+        
+        $response->getBody()->write(json_encode([
+            'error' => 'Failed to get gallery',
+            'details' => $e->getMessage(),
+            'request_id' => $requestId
+        ]));
+        
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+});
 
 /**
  * GET /uploads/{filename}

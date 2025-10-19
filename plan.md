@@ -409,3 +409,157 @@ Before starting development, verify the following requirements:
   - [x] Safari
 - [x] Fix any identified bugs
 
+## Milestone 8: Public URL Sharing
+
+### Database Schema Updates
+- [ ] Add new columns to galleries table:
+  - [ ] `share_hash` (TEXT UNIQUE) - 6-character unique identifier
+  - [ ] `is_public` (INTEGER DEFAULT 0) - Boolean flag for sharing
+  - [ ] `shared_at` (DATETIME) - Timestamp when sharing was enabled
+- [ ] Create index on `share_hash` column
+- [ ] Create and run migration script for existing database
+
+### Backend - Database Functions
+- [ ] Implement `generateUniqueShareHash()`:
+  - [ ] Generate 6-character hash using `substr(bin2hex(random_bytes(3)), 0, 6)`
+  - [ ] Check uniqueness against existing hashes
+  - [ ] Retry up to 10 times on collision
+  - [ ] Throw exception if unable to generate unique hash
+- [ ] Implement `enableGallerySharing($galleryId, $userId)`:
+  - [ ] Verify gallery ownership
+  - [ ] If hash exists, set `is_public = 1`
+  - [ ] If no hash, generate new hash and set `is_public = 1`, `shared_at = now()`
+  - [ ] Return updated gallery data
+- [ ] Implement `disableGallerySharing($galleryId, $userId)`:
+  - [ ] Verify gallery ownership
+  - [ ] Set `is_public = 0` (keep hash for re-enabling)
+  - [ ] Return success status
+- [ ] Implement `getGalleryByShareHash($hash)`:
+  - [ ] Query gallery where `share_hash = $hash AND is_public = 1`
+  - [ ] Include images ordered by `uploaded_at ASC`
+  - [ ] Return false if not found or not public
+
+### Backend - Logging
+- [ ] Add `LOG_TYPE_SHARE` constant
+- [ ] Implement `logShare($event, $galleryId, $userId, $shareHash, $requestId)`:
+  - [ ] Log at INFO level
+  - [ ] Write to `share.log` file
+  - [ ] Include event, gallery_id, user_id, share_hash in context
+- [ ] Add `LOG_TYPE_SHARE` to log rotation array
+
+### Backend - API Endpoints
+- [ ] Implement POST `/api/galleries/:id/share` (authenticated):
+  - [ ] Verify gallery ownership
+  - [ ] Call `enableGallerySharing()`
+  - [ ] Return 404 if gallery not found
+  - [ ] Return share_hash, share_url, and is_public
+  - [ ] Log share enable event with `logShare()`
+  - [ ] Handle errors with proper status codes
+- [ ] Implement DELETE `/api/galleries/:id/share` (authenticated):
+  - [ ] Verify gallery ownership
+  - [ ] Call `disableGallerySharing()`
+  - [ ] Return 404 if gallery not found
+  - [ ] Return success message
+  - [ ] Log share disable event with `logShare()`
+  - [ ] Handle errors with proper status codes
+- [ ] Implement GET `/s/:hash` (public, no auth):
+  - [ ] Call `getGalleryByShareHash($hash)`
+  - [ ] Return 404 if not found or not public
+  - [ ] Remove `user_id` from response for privacy
+  - [ ] Log public access with `logShare()`
+  - [ ] Handle errors with proper status codes
+
+### Frontend - API Client
+- [ ] Add `enableSharing(id)` function:
+  - [ ] POST to `/api/galleries/:id/share`
+  - [ ] Return share data
+- [ ] Add `disableSharing(id)` function:
+  - [ ] DELETE to `/api/galleries/:id/share`
+  - [ ] Return success
+- [ ] Add `getByShareHash(hash)` function:
+  - [ ] GET to `/s/:hash` (no auth)
+  - [ ] Handle 404 errors
+  - [ ] Return gallery data
+
+### Frontend - ShareModal Component
+- [ ] Create `ShareModal.jsx` component:
+  - [ ] Props: isOpen, onClose, shareUrl, onDisableSharing
+  - [ ] Display shareable URL in read-only input
+  - [ ] "Copy Link" button with clipboard API
+  - [ ] Show "Copied!" feedback for 2 seconds
+  - [ ] "Disable Sharing" button with confirmation
+  - [ ] Close button (X icon)
+  - [ ] Responsive design for mobile
+
+### Frontend - Gallery Detail Page Updates
+- [ ] Add Share button to gallery header:
+  - [ ] Icon: ShareIcon from Heroicons
+  - [ ] Placement: Next to Upload and Delete buttons
+  - [ ] Disabled state while enabling sharing
+- [ ] Add state management:
+  - [ ] `showShareModal` state
+  - [ ] `shareUrl` state
+  - [ ] `isEnablingShare` state
+- [ ] Implement `handleShareClick()`:
+  - [ ] If already public, show modal with existing URL
+  - [ ] Otherwise, call `enableSharing()` API
+  - [ ] Update gallery state with new share data
+  - [ ] Show ShareModal
+  - [ ] Handle errors
+- [ ] Implement `handleDisableSharing()`:
+  - [ ] Call `disableSharing()` API
+  - [ ] Update gallery state to set `is_public = false`
+  - [ ] Close modal
+  - [ ] Handle errors
+
+### Frontend - PublicGallery Page
+- [ ] Create `PublicGallery.jsx` page component:
+  - [ ] Extract `hash` from URL params
+  - [ ] Fetch gallery using `getByShareHash(hash)`
+  - [ ] Display loading state while fetching
+  - [ ] Display error state if not found
+  - [ ] Show gallery name and description
+  - [ ] Show image count
+  - [ ] Display images in responsive grid (2/3/4 columns)
+  - [ ] Click to open lightbox with full-size image
+  - [ ] Lightbox with prev/next navigation
+  - [ ] Keyboard navigation (arrow keys, ESC)
+  - [ ] No edit/delete/upload buttons (read-only)
+  - [ ] Footer: "Create your own gallery at my-galleries.com"
+  - [ ] Mobile responsive design
+
+### Frontend - Router Configuration
+- [ ] Add public route in `App.jsx`:
+  - [ ] Route path: `/s/:hash`
+  - [ ] Component: `PublicGallery`
+  - [ ] Not protected (no authentication required)
+
+### Documentation Updates
+- [ ] Update `spec.md`:
+  - [ ] Remove "Public URL sharing" from Out of Scope section
+  - [ ] Add new feature section "5. Public Gallery Sharing"
+  - [ ] Document new database columns in Galleries table
+  - [ ] Add new API endpoints to API section
+  - [ ] Add API response format examples
+- [ ] Update `plan.md`:
+  - [ ] Add this Milestone 8 with all implementation tasks
+
+### Testing
+- [ ] Test share workflow:
+  - [ ] Enable sharing and verify URL is generated
+  - [ ] Copy link and verify clipboard works
+  - [ ] Access public gallery via share link (no auth)
+  - [ ] Verify images display correctly
+  - [ ] Test lightbox navigation in public view
+  - [ ] Disable sharing and verify link returns 404
+  - [ ] Re-enable sharing and verify same hash is reused
+- [ ] Test edge cases:
+  - [ ] Try accessing disabled share link (should 404)
+  - [ ] Verify gallery owner can edit while shared
+  - [ ] Test hash collision handling (low probability)
+  - [ ] Verify logging for all share events
+- [ ] Test responsiveness:
+  - [ ] Share modal on mobile
+  - [ ] Public gallery page on mobile/tablet/desktop
+  - [ ] Lightbox on touch devices
+

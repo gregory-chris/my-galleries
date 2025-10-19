@@ -32,7 +32,8 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center gap-3">
+              <img src="/my-galleries-logo-2.png" alt="My Galleries Logo" className="h-10 w-10 object-contain" />
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Galleries</h1>
             </Link>
             

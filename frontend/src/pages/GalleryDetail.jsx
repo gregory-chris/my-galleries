@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PhotoIcon, ArrowLeftIcon, PencilIcon, TrashIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, ArrowLeftIcon, PencilIcon, TrashIcon, CloudArrowUpIcon, ShareIcon } from '@heroicons/react/24/outline';
 import ImageUpload from '../components/Image/ImageUpload';
+import ShareModal from '../components/Gallery/ShareModal';
+import { galleries } from '../api/client';
 
 export default function GalleryDetail() {
   const { id } = useParams();
@@ -12,6 +14,9 @@ export default function GalleryDetail() {
   const [error, setError] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [isEnablingShare, setIsEnablingShare] = useState(false);
   
   useEffect(() => {
     fetchGallery();
@@ -50,6 +55,50 @@ export default function GalleryDetail() {
   const handleUploadSuccess = (uploadedImages) => {
     setImages([...images, ...uploadedImages]);
     setShowUpload(false);
+  };
+  
+  const handleShareClick = async () => {
+    // If already shared, just show modal
+    if (gallery.is_public && gallery.share_hash) {
+      setShareUrl(`https://my-galleries.com/s/${gallery.share_hash}`);
+      setShowShareModal(true);
+      return;
+    }
+    
+    // Otherwise enable sharing first
+    setIsEnablingShare(true);
+    try {
+      const data = await galleries.enableSharing(id);
+      setShareUrl(data.share_url);
+      setShowShareModal(true);
+      
+      // Update gallery state
+      setGallery({
+        ...gallery,
+        is_public: data.is_public,
+        share_hash: data.share_hash
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to enable sharing');
+    } finally {
+      setIsEnablingShare(false);
+    }
+  };
+  
+  const handleDisableSharing = async () => {
+    try {
+      await galleries.disableSharing(id);
+      
+      // Update gallery state
+      setGallery({
+        ...gallery,
+        is_public: false
+      });
+      
+      setShowShareModal(false);
+    } catch (err) {
+      throw new Error(err.message || 'Failed to disable sharing');
+    }
   };
   
   const handleDeleteGallery = async () => {
@@ -192,6 +241,14 @@ export default function GalleryDetail() {
               <span>Upload</span>
             </button>
             <button
+              onClick={handleShareClick}
+              disabled={isEnablingShare}
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Share Gallery"
+            >
+              <ShareIcon className="w-5 h-5" />
+            </button>
+            <button
               onClick={handleDeleteGallery}
               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete Gallery"
@@ -242,6 +299,14 @@ export default function GalleryDetail() {
           onClose={() => setShowUpload(false)}
         />
       )}
+      
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareUrl={shareUrl}
+        onDisableSharing={handleDisableSharing}
+      />
       
       {/* Lightbox */}
       {selectedImage && (
